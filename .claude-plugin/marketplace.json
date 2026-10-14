@@ -1,0 +1,13 @@
+{
+  "name": "up-next",
+  "owner": {
+    "name": "Miles Chu"
+  },
+  "description": "Up Next, a Claude Code mod that advises the one step worth taking after each turn.",
+  "plugins": [
+    {
+      "name": "up-next",
+      "source": "./"
+    }
+  ]
+}

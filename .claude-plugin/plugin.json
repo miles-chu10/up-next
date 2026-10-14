@@ -1,0 +1,59 @@
+{
+  "name": "up-next",
+  "displayName": "Up Next",
+  "version": "1.0.0",
+  "description": "After every turn, Up Next recommends the one step worth taking next, checked against what the turn actually did, sendable as written and never risky, and runs it in one click. Works in the desktop app and the terminal, and through /next.",
+  "author": {
+    "name": "Miles Chu"
+  },
+  "license": "MIT",
+  "keywords": [
+    "next-step",
+    "advice",
+    "suggestions",
+    "verification",
+    "prompt",
+    "function-hooks"
+  ],
+  "homepage": "https://github.com/miles-chu10/up-next",
+  "repository": "https://github.com/miles-chu10/up-next",
+  "documentationUrl": "https://github.com/miles-chu10/up-next#readme",
+  "supportUrl": "https://github.com/miles-chu10/up-next/issues",
+  "userConfig": {
+    "minAnswerChars": {
+      "type": "number",
+      "title": "Shortest answer to advise after",
+      "description": "Skip advice after answers shorter than this many characters.",
+      "default": 80
+    },
+    "showReason": {
+      "type": "boolean",
+      "title": "Show the reason",
+      "description": "Show why the step is worth doing under it, and in the status line.",
+      "default": true
+    },
+    "groundAdvice": {
+      "type": "boolean",
+      "title": "Ground advice in the turn's tool calls",
+      "description": "Note which files were edited and which checks (tests, type checks, lint, build) ran or failed this turn, and tell the advisor. Held in memory for the turn only.",
+      "default": true
+    },
+    "suggestSkills": {
+      "type": "boolean",
+      "title": "Suggest skills and slash commands",
+      "description": "Tell the advisor which skills and slash commands this session has, so a step can be one of them. A step naming a command the session does not have is dropped.",
+      "default": true
+    },
+    "row": {
+      "type": "string",
+      "title": "Card above the message box",
+      "description": "auto draws the card where ghost text cannot show (the desktop app); always draws it in the terminal too, beside the ghost text; off never draws it. /next works either way.",
+      "default": "auto",
+      "options": [
+        "auto",
+        "always",
+        "off"
+      ]
+    }
+  }
+}
