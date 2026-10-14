@@ -173,14 +173,6 @@ export function labelOf(step: Step): Label {
   return step.kind === "unblock" ? "UNBLOCK" : "ADVANCE";
 }
 
-// The advice as plain text, for where nothing draws a card (the VS Code chat
-// panel, headless runs): the step, tagged, and its reason on the next line.
-export function formatStep(step: Step | undefined): string {
-  if (step === undefined) return "Up Next: nothing worth doing next.";
-  const head = `Up Next [${labelOf(step).toLowerCase()}]: ${step.prompt}`;
-  return step.why === "" ? head : `${head}\n${step.why}`;
-}
-
 type RawStep = { kind?: unknown; prompt?: unknown; why?: unknown };
 
 // Takes {"prompt", "why", "kind"}, with prose around it or not. An older

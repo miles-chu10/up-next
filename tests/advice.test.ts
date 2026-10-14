@@ -2,7 +2,6 @@ import { describe, expect, test } from "claude-code/testing";
 import {
   advisorPrompt,
   clean,
-  formatStep,
   hasPlaceholder,
   isRisky,
   labelOf,
@@ -172,7 +171,7 @@ describe("text handling", () => {
       command: "code-review",
       args: "high",
     });
-    expect(splitCommand("/next")).toEqual({ command: "next", args: "" });
+    expect(splitCommand("/compact")).toEqual({ command: "compact", args: "" });
     expect(splitCommand("run the tests")).toBeNull();
     expect(namesKnownCommand("/made-up", null)).toBe(true);
     expect(namesKnownCommand("/made-up", KNOWN)).toBe(false);
@@ -252,24 +251,5 @@ describe("advisorPrompt", () => {
     expect(full).toContain(
       "<available-skills>\n/code-review: Review\n</available-skills>",
     );
-  });
-});
-
-describe("formatStep", () => {
-  test("gives the step, tagged, with its reason on the next line", async () => {
-    expect(
-      formatStep({
-        kind: "verify",
-        prompt: "run the tests",
-        why: "unverified",
-      }),
-    ).toBe("Up Next [verify]: run the tests\nunverified");
-    expect(
-      formatStep({ kind: "advance", prompt: "/code-review high", why: "" }),
-    ).toBe("Up Next [skill]: /code-review high");
-  });
-
-  test("says so when there is nothing", async () => {
-    expect(formatStep(undefined)).toBe("Up Next: nothing worth doing next.");
   });
 });

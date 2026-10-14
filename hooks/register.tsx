@@ -3,16 +3,12 @@
 // with its reason. Nothing is ever sent on its own: the step goes out only when
 // the person presses Run (or Enter in the editor).
 //
-//  - desktop app: a card in the band above the message box (Run, Edit,
-//    Dismiss), and the step as the message box's ghost text. The app's message
-//    box is out of a mod's reach, so Edit opens a field in the card instead.
-//  - terminal: the step is the message box's Tab-to-take ghost text and its
-//    reason is in the status line; the card is there too when row is "always".
-//  - /next: the same card in the transcript, and a way to ask for advice on
-//    demand.
+//  - terminal and desktop app: a card in the band above the message box (Run,
+//    Edit, Dismiss), the step as the message box's ghost text and its reason
+//    in the status line. The desktop app's message box is out of a mod's
+//    reach, so there Edit opens a field in the card instead.
 //  - Where nothing draws (the VS Code chat panel, claude -p, the Agent SDK) no
-//    advice is worked out after a turn, since nobody could see it; /next there
-//    replies with the advice as plain text.
+//    advice is worked out, since nobody could see it.
 //
 // The engine's own guesses at the next prompt are dropped where they pass
 // through prompt.suggest, so only one suggestion shows.
@@ -26,7 +22,6 @@ import type {
 } from "claude-code";
 import {
   advisorPrompt,
-  formatStep,
   labelOf,
   normalize,
   parseAdvice,
@@ -61,7 +56,6 @@ type Settings = {
   showReason: boolean;
   ground: boolean;
   suggestSkills: boolean;
-  row: "auto" | "always" | "off";
 };
 
 const TAG_COLOR: Record<Label, string> = {
@@ -78,11 +72,6 @@ const WATCHED: ReadonlySet<string> = new Set([
   "NotebookEdit",
   "Bash",
 ]);
-const rowTag = (run: number) => `Up Next #${run}`;
-// The engine shows a hook's answer under the plugin's name ("up-next: Up Next
-// #2: ..."), so the row's text may carry that prefix before the tag.
-const isRow = (text: string, run: number) =>
-  text.replace(/^up-next: /, "").startsWith(`${rowTag(run)}:`);
 
 // Session-local state; a hot reload resets it, which is fine.
 let settings: Settings = settingsFrom(undefined);
@@ -91,8 +80,6 @@ let facts: Facts = newFacts();
 let skipped: string[] = [];
 let known: ReadonlySet<string> | null = null;
 let hasInput = false;
-let runs = 0;
-let outcome = "";
 
 function settingsFrom(
   options: Readonly<Record<string, unknown>> | undefined,
@@ -103,10 +90,6 @@ function settingsFrom(
     showReason: options?.showReason !== false,
     ground: options?.groundAdvice !== false,
     suggestSkills: options?.suggestSkills !== false,
-    row:
-      options?.row === "always" || options?.row === "off"
-        ? options.row
-        : "auto",
   };
 }
 
@@ -205,11 +188,7 @@ async function canDraw($: EngineInterface): Promise<boolean> {
   return surfaces.some((s) => s === "terminal" || s === "desktop");
 }
 
-async function deliver(
-  $: EngineInterface,
-  turnId: string,
-  manual: boolean,
-): Promise<void> {
+async function deliver($: EngineInterface, turnId: string): Promise<void> {
   let step: Step | undefined;
   try {
     step = await advise($);
@@ -220,10 +199,8 @@ async function deliver(
   if (view.kind !== "loading" || view.turnId !== turnId) return;
   if (step === undefined) {
     show($, { kind: "hidden" });
-    if (manual) $.ui.toast("Up Next: nothing worth doing next");
     return;
   }
-  outcome = "";
   show($, { kind: "offer", step });
   announce($, step);
 }
@@ -238,7 +215,6 @@ async function send(
 ): Promise<void> {
   const body = message.trim();
   if (body === "") return;
-  outcome = "sent";
   show($, { kind: "hidden" });
   $.ui.status(undefined);
   try {
@@ -252,7 +228,6 @@ async function send(
       if (sent.drop !== undefined) throw new Error(sent.drop);
     }
   } catch (error) {
-    outcome = "";
     show($, restore);
     $.ui.toast(`Could not send it: ${String(error)}`);
   }
@@ -275,7 +250,6 @@ async function edit($: EngineInterface, surface: RenderSurface): Promise<void> {
       filled?.isFilled === true &&
       normalize(filled.text) === normalize(step.prompt)
     ) {
-      outcome = "moved to the message box";
       show($, { kind: "hidden" });
       $.ui.status(undefined);
       $.ui.toast("In the message box: edit it, then press Enter");
@@ -292,7 +266,6 @@ async function edit($: EngineInterface, surface: RenderSurface): Promise<void> {
 function dismiss($: EngineInterface): void {
   const v = view;
   if (v.kind === "offer" || v.kind === "edit") remember(v.step.prompt);
-  outcome = "dismissed";
   show($, { kind: "hidden" });
   $.ui.status(undefined);
 }
@@ -391,17 +364,6 @@ export const register: Register = (on, options) => {
     isShown: false,
   }));
 
-  on("session.start", async ($, e, next) => {
-    const result = await next(e);
-    await $.command
-      .register({
-        name: "next",
-        description: "Up Next: show the advised next step, or work one out now",
-      })
-      .catch(() => undefined);
-    return result;
-  });
-
   on("turn.start", async ($, e, next) => {
     // A subagent starting is not the person moving on.
     if ((e as { agentId?: string }).agentId === undefined) {
@@ -436,22 +398,14 @@ export const register: Register = (on, options) => {
     if (!(await canDraw($))) return result;
     const turnId = e.turnId;
     show($, { kind: "loading", turnId });
-    void deliver($, turnId, false);
+    void deliver($, turnId);
     return result;
   });
 
   on("ui.render", { component: "AbovePrompt" }, async ($, e, next) => {
     const below = await next(e);
     const current = view;
-    const hasRow =
-      settings.row === "always" ||
-      (settings.row === "auto" && e.surface !== "terminal");
-    if (
-      !hasRow ||
-      current.kind === "hidden" ||
-      e.props.hasSurvey ||
-      e.props.isWorking
-    )
+    if (current.kind === "hidden" || e.props.hasSurvey || e.props.isWorking)
       return below;
     const kit = kitOf($, e);
     const { Box } = kit;
@@ -466,45 +420,5 @@ export const register: Register = (on, options) => {
     ) : (
       mine
     );
-  });
-
-  // /next: the card as a transcript row. Only the latest run's row is live;
-  // earlier ones say so.
-  on(
-    "ui.render",
-    { component: "CommandOutput", props: { command: "next" } },
-    ($, e) => {
-      const kit = kitOf($, e);
-      hasInput = kit.Input !== undefined;
-      const { Text } = kit;
-      if (!isRow(e.props.text, runs))
-        return <Text dimColor>Up Next: earlier advice</Text>;
-      if (view.kind === "hidden")
-        return (
-          <Text
-            dimColor
-          >{`Up Next: ${outcome === "" ? "nothing to show" : outcome}`}</Text>
-        );
-      return card($, kit, view);
-    },
-  );
-
-  on("command.run", { command: "next" }, async ($) => {
-    runs += 1;
-    // Where nothing draws there is no card to wait for: work the advice out now
-    // and reply with it as text.
-    if (!(await canDraw($)))
-      return { text: formatStep(await advise($).catch(() => undefined)) };
-    if (view.kind === "hidden") {
-      const turnId = `manual-${runs}`;
-      show($, { kind: "loading", turnId });
-      void deliver($, turnId, true);
-    }
-    return {
-      text:
-        view.kind === "offer"
-          ? `${rowTag(runs)}: ${view.step.prompt}`
-          : `${rowTag(runs)}: working out the next step…`,
-    };
   });
 };

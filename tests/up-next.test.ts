@@ -320,16 +320,18 @@ describe("grounding", () => {
 
 describe("the card", () => {
   for (const surface of ["desktop", "terminal"] as const) {
-    test(`on ${surface}, ${surface === "desktop" ? "shows" : "hides"} the card above the message box`, async ($, on) => {
-      host(on, ONE);
+    test(`on ${surface}, shows the card with Run, Edit and Dismiss and puts the step in the message box`, async ($, on) => {
+      const h = host(on, ONE, { surfaces: [surface] });
       await $.turn.complete(answer("c1"));
       await settle();
       const band = await mount($, surface);
-      const shown = surface === "desktop";
-      expect(await hasText(band, /run the tests you just wrote/)).toBe(shown);
-      expect(await hasText(band, /VERIFY/)).toBe(shown);
-      expect(await hasText(band, /the change is unverified/)).toBe(shown);
-      expect((await band.find({ key: "run" })) !== undefined).toBe(shown);
+      expect(await hasText(band, /run the tests you just wrote/)).toBe(true);
+      expect(await hasText(band, /VERIFY/)).toBe(true);
+      expect(await hasText(band, /the change is unverified/)).toBe(true);
+      expect(await band.find({ key: "run" })).toBeDefined();
+      expect(await band.find({ key: "edit" })).toBeDefined();
+      expect(await band.find({ key: "dismiss" })).toBeDefined();
+      expect(h.suggested).toEqual(["run the tests you just wrote"]);
       await band.unmount();
     });
   }
@@ -381,32 +383,6 @@ describe("the card", () => {
     expect(await hasText(band, /cache meter/)).toBe(true);
     await band.unmount();
   });
-
-  test(
-    'row "always" also draws in the terminal',
-    { options: { row: "always" } } as any,
-    async ($: any, on: any) => {
-      host(on, ONE);
-      await $.turn.complete(answer("c7"));
-      await settle();
-      const band = await mount($, "terminal");
-      expect(await hasText(band, /run the tests you just wrote/)).toBe(true);
-      await band.unmount();
-    },
-  );
-
-  test(
-    'row "off" draws nothing on the desktop',
-    { options: { row: "off" } } as any,
-    async ($: any, on: any) => {
-      host(on, ONE);
-      await $.turn.complete(answer("c8"));
-      await settle();
-      const band = await mount($, "desktop");
-      expect(await hasText(band, /run the tests you just wrote/)).toBe(false);
-      await band.unmount();
-    },
-  );
 
   test("the card offers Run, Edit and Dismiss, and nothing to page through", async ($, on) => {
     host(on, ONE);
@@ -486,7 +462,6 @@ describe("Run", () => {
 describe("Edit", () => {
   test(
     "on the terminal, puts the step in the message box",
-    { options: { row: "always" } } as any,
     async ($: any, on: any) => {
       const h = host(on, ONE);
       await $.turn.complete(answer("e1"));
@@ -541,7 +516,6 @@ describe("Edit", () => {
 
   test(
     "on the terminal, never overwrites a draft you have started, or fills a refused box",
-    { options: { row: "always" } } as any,
     async ($: any, on: any) => {
       const h = host(on, [ONE, ONE], { box: "half a thought" });
       await $.turn.complete(answer("e4"));
@@ -607,102 +581,14 @@ describe("Dismiss", () => {
   });
 });
 
-describe("/next", () => {
-  test("is registered when the session starts", async ($, on) => {
+describe("no slash command", () => {
+  test("registers no command when the session starts", async ($, on) => {
     const h = host(on, ONE);
     await $.session.start({
-      surface: "desktop",
+      surface: "terminal",
       isInteractive: true,
       cwd: "/work",
     } as any);
-    expect(h.registered).toEqual(["next"]);
-  });
-
-  test("works out advice on demand and draws the card in its row", async ($, on) => {
-    const h = host(on, ONE);
-    const ran = await $.command.run({ command: "next" } as any);
-    expect(ran.text).toContain("Up Next #1");
-    await settle();
-    expect(h.forks()).toBe(1);
-    const row = await mount($, "desktop", "CommandOutput", {
-      props: { command: "next", args: "", text: ran.text, isErrored: false },
-    });
-    expect(await hasText(row, /run the tests you just wrote/)).toBe(true);
-    await row.press({ key: "run" });
-    await settle();
-    expect(h.submitted.map((s) => s.text)).toEqual([
-      "run the tests you just wrote",
-    ]);
-    await row.unmount();
-  });
-
-  test("draws the card when the row's text carries the plugin's name", async ($, on) => {
-    const h = host(on, ONE);
-    await $.turn.complete(answer("x1"));
-    await settle();
-    const ran = await $.command.run({ command: "next" } as any);
-    const row = await mount($, "terminal", "CommandOutput", {
-      props: {
-        command: "next",
-        args: "",
-        text: `up-next: ${ran.text}`,
-        isErrored: false,
-      },
-    });
-    expect(await hasText(row, /earlier advice/)).toBe(false);
-    expect(await hasText(row, /run the tests you just wrote/)).toBe(true);
-    expect(h.forks()).toBe(1);
-    await row.unmount();
-  });
-
-  test("shows the standing advice without asking again, and marks older rows", async ($, on) => {
-    const h = host(on, ONE);
-    await $.turn.complete(answer("x1"));
-    await settle();
-    const first = await $.command.run({ command: "next" } as any);
-    expect(first.text).toContain("run the tests you just wrote");
-    const second = await $.command.run({ command: "next" } as any);
-    await settle();
-    expect(h.forks()).toBe(1);
-    const old = await mount($, "desktop", "CommandOutput", {
-      props: { command: "next", args: "", text: first.text, isErrored: false },
-    });
-    expect(await hasText(old, /earlier advice/)).toBe(true);
-    const live = await mount($, "desktop", "CommandOutput", {
-      props: { command: "next", args: "", text: second.text, isErrored: false },
-    });
-    expect(await live.find({ key: "run" })).toBeDefined();
-    await old.unmount();
-    await live.unmount();
-  });
-
-  test("says so when there is nothing worth doing", async ($, on) => {
-    const h = host(on, reply());
-    await $.command.run({ command: "next" } as any);
-    await settle();
-    expect(h.toasts.some((t) => t.includes("nothing worth doing next"))).toBe(
-      true,
-    );
-  });
-
-  test("where nothing draws, replies with the advice as text", async ($, on) => {
-    const h = host(on, ONE, { surfaces: ["vscode"] });
-    const ran = await $.command.run({ command: "next" } as any);
-    expect(h.forks()).toBe(1);
-    expect(ran.text).toBe(
-      "Up Next [verify]: run the tests you just wrote\nthe change is unverified",
-    );
-    // No card to wait for, so nothing is left offered.
-    const row = await mount($, "vscode", "CommandOutput", {
-      props: { command: "next", args: "", text: ran.text, isErrored: false },
-    });
-    expect(await row.find({ key: "run" })).toBeUndefined();
-    await row.unmount();
-  });
-
-  test("where nothing draws, says so in text when there is nothing worth doing", async ($, on) => {
-    host(on, reply(), { surfaces: [] });
-    const ran = await $.command.run({ command: "next" } as any);
-    expect(ran.text).toBe("Up Next: nothing worth doing next.");
+    expect(h.registered).toEqual([]);
   });
 });

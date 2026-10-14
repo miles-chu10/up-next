@@ -7,7 +7,7 @@ It is advice, not a guess at what you will type.
 - **Verify first.** If Claude edited files and no passing test, type check or build has run since, the first step is to check them. Up Next sees this from the tool calls themselves, not from Claude's own summary.
 - **Safe by construction.** Steps that push, deploy, publish, merge, delete, send or spend are dropped, and it never widens the task you set. You decide those.
 - **One step, ready to send.** One recommendation, never a menu. It is written to be sent exactly as it stands (a step with a placeholder like `[paste]` is dropped), and it is always something Claude can do: when the best next move is yours alone, such as trying the result yourself or making a decision, Up Next stays quiet.
-- **One click.** On the desktop app, Run sends the step as your own message (or runs it, if it is a skill or slash command). Edit opens it for changes first.
+- **One click.** In the terminal and the desktop app, Run sends the step as your own message (or runs it, if it is a skill or slash command). Edit opens it for changes first.
 
 ```
  VERIFY  run the tests you just wrote
@@ -19,10 +19,9 @@ It is advice, not a guess at what you will type.
 
 | Where | What you get |
 | --- | --- |
-| Desktop app (Code tab) | The card above, in the band above the message box, and the step as dim ghost text in the message box. Edit puts the step in a field in the card for changes (the app doesn't let mods write into its message box). |
-| Terminal | The top step as dim ghost text in the message box (Tab takes it, then Enter sends) and its reason in the status line. Set `row` to `always` to get the card here too. |
-| VS Code chat panel, `claude -p`, the Agent SDK | Mods draw nothing here, so Up Next does not work out advice after a turn (nobody could see it). `/next` works it out on demand and replies with the steps as text; send the one you want yourself. |
-| Anywhere it draws | `/next` shows the card in the transcript, or works out advice on demand if there is none. |
+| Terminal | The card above, in the band above the message box (click a button, or press ctrl+x then Tab to move focus into the band, Tab to the button, Enter to press it). The step is also dim ghost text in the message box (Tab takes it, then Enter sends), with its reason in the status line. Edit puts the step in the message box for changes. |
+| Desktop app (Code tab) | The same card above the message box. Edit opens the step in a field in the card, because the app doesn't let mods write into its message box. |
+| VS Code chat panel, `claude -p`, the Agent SDK | Mods draw nothing here, so Up Next does nothing. |
 
 The step is tagged **VERIFY**, **UNBLOCK**, **ADVANCE** or **SKILL** (a slash command from your session). A step you dismiss is not suggested again this session.
 
@@ -34,12 +33,11 @@ The step is tagged **VERIFY**, **UNBLOCK**, **ADVANCE** or **SKILL** (a slash co
 | `showReason` | on | Show why the step is worth doing, under the step and in the status line. |
 | `groundAdvice` | on | Note which files were edited and which checks ran or failed this turn, and tell the advisor. |
 | `suggestSkills` | on | Tell the advisor which skills and slash commands the session has. A step naming one the session lacks is dropped. |
-| `row` | auto | `auto` draws the card where ghost text cannot show (the desktop app), `always` also in the terminal, `off` never. `/next` works either way. |
 
 ## What it reads, runs and sends
 
 - **Reads:** the answer that just ended, and, while a turn runs, the inputs of Edit, Write, NotebookEdit and Bash calls and whether they failed (file paths and shell commands, kept in memory for that turn only). It also reads the session's list of slash commands and skills and which surfaces are attached.
-- **Sends:** one request to the session's own model after each qualifying turn in a terminal or desktop session, or when you run `/next`, through Claude Code's cache-sharing fork, so it costs about one short reply. That request continues your session, so the model sees the conversation it already has, plus the advisor instructions, the observed facts and the skills list. Nothing goes anywhere else: no network calls, no files written, nothing stored between sessions.
+- **Sends:** one request to the session's own model after each qualifying turn in a terminal or desktop session, through Claude Code's cache-sharing fork, so it costs about one short reply. That request continues your session, so the model sees the conversation it already has, plus the advisor instructions, the observed facts and the skills list. Nothing goes anywhere else: no network calls, no files written, nothing stored between sessions.
 - **Acts:** only when you press Run (or press Enter in the editor). It never submits on its own.
 
 ## Install

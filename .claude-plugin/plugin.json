@@ -1,8 +1,8 @@
 {
   "name": "up-next",
   "displayName": "Up Next",
-  "version": "1.0.0",
-  "description": "After every turn, Up Next recommends the one step worth taking next, checked against what the turn actually did, sendable as written and never risky, and runs it in one click. Works in the desktop app and the terminal, and through /next.",
+  "version": "1.1.0",
+  "description": "After every turn, Up Next recommends the one step worth taking next, checked against what the turn actually did, sendable as written and never risky. It shows as a card with Run, Edit and Dismiss above the message box, in the terminal and the desktop app.",
   "author": {
     "name": "Miles Chu"
   },
@@ -43,17 +43,6 @@
       "title": "Suggest skills and slash commands",
       "description": "Tell the advisor which skills and slash commands this session has, so a step can be one of them. A step naming a command the session does not have is dropped.",
       "default": true
-    },
-    "row": {
-      "type": "string",
-      "title": "Card above the message box",
-      "description": "auto draws the card where ghost text cannot show (the desktop app); always draws it in the terminal too, beside the ghost text; off never draws it. /next works either way.",
-      "default": "auto",
-      "options": [
-        "auto",
-        "always",
-        "off"
-      ]
     }
   }
 }
